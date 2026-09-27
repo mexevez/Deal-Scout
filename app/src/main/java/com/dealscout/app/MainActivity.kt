@@ -17,66 +17,133 @@ import java.net.URL
 import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
+
     private lateinit var webView: WebView
     private lateinit var statusText: TextView
+
     private val localUrl = "http://127.0.0.1:8765"
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webView)
         statusText = findViewById(R.id.statusText)
 
+        // Configure WebView
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.settings.loadsImagesAutomatically = true
+
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
 
+        // Start Python
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(this))
         }
 
-        // The Python file already contains its own HTTP server. Start main() on a
-        // background thread and suppress its desktop browser launcher.
-        thread(name = "DealScoutPython", isDaemon = true) {
+        // Start Deal Scout Python server
+        thread(
+            name = "DealScoutPython",
+            isDaemon = true
+        ) {
+
             try {
+
                 val py = Python.getInstance()
+
+                // Set environment variable so Python doesn't try
+                // to launch a desktop browser on Android.
                 val os = py.getModule("os")
-                os["environ"].callAttr("__setitem__", "DEAL_SCOUT_NO_BROWSER", "1")
-                py.getModule("deal_scout").callAttr("main")
+                val environ = os["environ"]
+
+                if (environ != null) {
+                    environ.callAttr(
+                        "__setitem__",
+                        "DEAL_SCOUT_NO_BROWSER",
+                        "1"
+                    )
+                }
+
+                // Load deal_scout.py
+                val dealScout = py.getModule("deal_scout")
+
+                // Start Python main()
+                dealScout.callAttr("main")
+
             } catch (e: Exception) {
+
+                e.printStackTrace()
+
                 runOnUiThread {
-                    statusText.text = "Deal Scout couldn't start.\n\n${e.message}"
+
+                    statusText.visibility = View.VISIBLE
+
+                    statusText.text =
+                        "Deal Scout couldn't start.\n\n" +
+                        (e.message ?: e.toString())
                 }
             }
         }
 
+        // Wait until the Python HTTP server is ready
         waitForServer()
     }
 
     private fun waitForServer(attempt: Int = 0) {
+
         thread {
+
             val ready = try {
-                val c = URL("$localUrl/api/status").openConnection() as HttpURLConnection
-                c.connectTimeout = 500
-                c.readTimeout = 500
-                c.responseCode == 200
-            } catch (_: Exception) { false }
+
+                val connection =
+                    URL("$localUrl/api/status")
+                        .openConnection() as HttpURLConnection
+
+                connection.connectTimeout = 500
+                connection.readTimeout = 500
+                connection.requestMethod = "GET"
+
+                val responseCode = connection.responseCode
+
+                connection.disconnect()
+
+                responseCode == HttpURLConnection.HTTP_OK
+
+            } catch (_: Exception) {
+
+                false
+            }
 
             runOnUiThread {
+
                 if (ready) {
+
                     statusText.visibility = View.GONE
+
                     webView.visibility = View.VISIBLE
+
                     webView.loadUrl(localUrl)
-                } else if (attempt < 30) {
+
+                } else if (attempt < 40) {
+
                     Handler(Looper.getMainLooper()).postDelayed(
-                        { waitForServer(attempt + 1) }, 250
+                        {
+                            waitForServer(attempt + 1)
+                        },
+                        250
                     )
+
                 } else {
-                    statusText.text = "Deal Scout took too long to start. Close the app and try again."
+
+                    statusText.visibility = View.VISIBLE
+
+                    statusText.text =
+                        "Deal Scout took too long to start.\n\n" +
+                        "Close the app and try again."
                 }
             }
         }
@@ -84,6 +151,14 @@ class MainActivity : AppCompatActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
+
+        if (webView.canGoBack()) {
+
+            webView.goBack()
+
+        } else {
+
+            super.onBackPressed()
+        }
     }
 }
