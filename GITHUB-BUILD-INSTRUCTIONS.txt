@@ -1,0 +1,20 @@
+DEAL SCOUT — AUTOMATIC APK BUILD
+
+1. Create or sign in to a GitHub account.
+2. Create a new repository. Name it: DealScout
+3. Upload EVERYTHING inside this DealScoutAndroid project folder to the repository.
+   Important: .github must also be uploaded.
+4. Open the repository's Actions tab.
+5. If GitHub asks you to enable workflows, enable them.
+6. Open "Build Deal Scout APK".
+7. Press "Run workflow" and then the green "Run workflow" button.
+   Uploading to the main/master branch may also start the build automatically.
+8. Wait for the build to finish.
+9. Open the completed build.
+10. Under Artifacts, download "DealScout-APK".
+11. Unzip that artifact. Inside is app-debug.apk.
+12. Send app-debug.apk to your Samsung and open it.
+13. If Android blocks installation, allow installs from the app you used to open the APK.
+14. Install Deal Scout.
+
+You do NOT need Termux after installing the APK.
