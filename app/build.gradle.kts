@@ -14,15 +14,27 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
+    }
+
+    // Make Java and Kotlin use the SAME JVM version.
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
 chaquopy {
     defaultConfig {
         version = "3.13"
+
         pip {
             install("certifi")
         }
